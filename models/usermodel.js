@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { ObjectId } = require('mongodb');
 
 // Declare the Schema of the Mongo model
 const userSchema = new mongoose.Schema({
@@ -29,6 +30,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "user",
     },
+    cart: {
+        type: Array,
+        default: [],
+    },
+    address: [{type: ObjectId, ref: "Address"}],
+    wishlist: [{type: ObjectId, ref: "Product"}],
+
+}, {
+    timestaamps: "true",
 });
 
 // Pre-save hook to hash the password before saving the user
