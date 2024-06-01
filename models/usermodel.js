@@ -34,11 +34,16 @@ const userSchema = new mongoose.Schema({
         type: Array,
         default: [],
     },
-    address: [{type: ObjectId, ref: "Address"}],
-    wishlist: [{type: ObjectId, ref: "Product"}],
+    address: [{type: mongoose.Schema.ObjectId, ref: "Address"}],
+    wishlist: [{type: mongoose.Schema.ObjectId, ref: "Product"}],
 
 }, {
-    timestaamps: "true",
+    timestamps:  {
+        timestamps: {
+            createdAt: 'created_at',  // Custom name for createdAt field
+            updatedAt: 'updated_at'   // Custom name for updatedAt field
+        }
+    }
 });
 
 // Pre-save hook to hash the password before saving the user
