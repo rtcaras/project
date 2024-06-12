@@ -1,31 +1,33 @@
 const express = require('express');
-const bodyParser = require("body-parser");
-const dotenv = require("dotenv");
-const connectDB = require("./config/Dbconnect");
-const authRouter = require('./routes/authRoute');
-const productRouter = require('./routes/productRoute');
-const { notFound, errorHandler } = require('./middlewares/errorHandler');
-const cookieParser = require("cookie-parser");
+const morgan = require('morgan');
+const connectDB = require('./config/connectDb'); 
+const userRoutes = require('./routes/userRoute'); 
+const productRoutes = require('./routes/productRoute'); 
+const { errorHandler, notFound } = require('./middlewares/errorHandler');
 
-dotenv.config();
+// Load environment variables
+require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
 
-//Connect to Database
+// Connect to the database
 connectDB();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(cookieParser());
 
-app.use("/api/user", authRouter);
-app.use("api/product", productRouter);
+// Middleware
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// Use user and product routes
+app.use('/api/users', userRoutes); 
+app.use('/api/products', productRoutes); 
 
+// Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
 
+const PORT = process.env.PORT || 5000;
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
