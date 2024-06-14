@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const User = require('../models/usermodel');
 const asyncHandler = require('express-async-handler');
 const jwt = require('jsonwebtoken');
@@ -187,13 +188,125 @@ const unblockUser = asyncHandler(async (req, res) => {
     }
 });
 
+// Update Password
+const updatePassword = asyncHandler(async (req, res) => {
+    const { id } = req.user;
+    const { password } = req.body;
+
+    if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    try {
+        const user = await User.findById(id);
+        if (user) {
+            user.password = password;
+            const updatedPassword = await user.save();
+            res.json(updatedPassword);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Forgot Password Token
+const forgotPasswordToken = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+
+    try {
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Generate a token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+        // Set reset token and expiry on user model
+        user.passwordResetToken = resetTokenHash;
+        user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // Token valid for 10 minutes
+
+        await user.save();
+
+        // Send reset token via email (assuming you have a sendEmail function)
+        // await sendEmail(user.email, `Your password reset token is: ${resetToken}`);
+
+        res.status(200).json({ message: 'Password reset token sent to email' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Reset Password
+const resetPassword = asyncHandler(async (req, res) => {
+    const { password } = req.body;
+    const { token } = req.params;
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    try {
+        const user = await User.findOne({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Token has expired, please try again later' });
+        }
+
+        user.password = password;
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+
+        await user.save();
+
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Create Admin User
+const createAdminUser = asyncHandler(async (req, res) => {
+    try {
+        const { firstname, lastname, email, password, mobile } = req.body;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const adminUser = new User({
+            firstname: firstname || 'Admin',
+            lastname: lastname || 'User',
+            email: email || 'admin@example.com',
+            password: hashedPassword,
+            mobile: mobile || '1234567890',
+            isAdmin: true,
+        });
+
+        await adminUser.save();
+        res.status(201).json({ message: 'Admin user created' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating admin user', error: error.message });
+    }
+});
+
 module.exports = { 
     createUser, 
     loginUserController,
-    getallUser: [protect, isAdmin, asyncHandler(getallUser)],
-    getaUser: [protect, isAdmin, asyncHandler(getaUser)],
-    deleteaUser: [protect, isAdmin, asyncHandler(deleteaUser)],
-    updatedUser: [protect, asyncHandler(updatedUser)],
-    blockUser: [protect, isAdmin, asyncHandler(blockUser)],
-    unblockUser: [protect, isAdmin, asyncHandler(unblockUser)],
+    getallUser,
+    getaUser,
+    deleteaUser,
+    updatedUser,
+    blockUser,
+    unblockUser,
+    updatePassword,
+    forgotPasswordToken,
+    resetPassword,
+    createAdminUser,
 };

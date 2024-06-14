@@ -8,13 +8,20 @@ const {
     updatedUser,
     blockUser,
     unblockUser,
+    updatePassword,
+    forgotPasswordToken,
+    resetPassword,
+    createAdminUser,
 } = require('../controllers/userController');
 const { protect, isAdmin } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
-
+router.post('/create-admin', createAdminUser);
+router.put("/password", protect, updatePassword);
 router.post('/register', createUser);
 router.post('/login', loginUserController);
+router.post('/forgot-password', forgotPasswordToken);
+router.put('/reset-password/:token', resetPassword);
 router.get('/', protect, isAdmin, getallUser);
 router.get('/:id', protect, isAdmin, getaUser);
 router.put('/:id', protect, updatedUser);
